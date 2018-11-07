@@ -16,13 +16,10 @@
 <script>
     $(function () {
         var url = "/frontend_zujian/h5-slice-upload/server/server.php";
-        var start = 0,end=0,pieceSize = 1024*1000;
-
+        var pieceSize = 1024*300,totalSize=0,uploadedSize = 0;
 
         $("#upload").click(function () {
-
             var file = document.getElementById("file");
-
             //获取所有文件
             var fileList = file.files;
 
@@ -36,8 +33,9 @@
             var i = 0;
             while (i<fileList.length){
                 console.log("=================================================");
-                console.log('开始处理第' + i + "个文件, 文件是" + fileList[i]['name'] );
+                console.log('开始处理第' + i + "个文件, 文件是" + fileList[i]['name'] + "大小是:" + fileList[i]['size']  );
                 var targetFile = fileList[i];
+                totalSize += targetFile.size;
                 await uploadFile(targetFile,i);
                 i++;
                 if(i == fileList.length) return;
@@ -52,13 +50,14 @@
             var fileSize = targetFile.size;
             var total =  Math.ceil( fileSize / pieceSize );
 
-            var i = 0;
-
             await handle();
 
             async function handle() {
+                var i = 0;
+                var start = end = 0;
                 while(i < total){
                     end = start + pieceSize;
+
                     if(end >= fileSize){
                         end = fileSize;
                     }
@@ -67,7 +66,7 @@
                     var frag = targetFile.slice(start, end);
 
                     await send( filename,frag,i , total ,function () {
-                        console.log( '文件的index:' + index+ "| 切片上传 回调 res111",i)
+                        console.log( '文件的index:' + index+ "| 切片上传完成 回调 res111",i)
                     });
                     start = end;
                     i++;

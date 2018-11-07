@@ -15,12 +15,13 @@ use Monolog\Handler\StreamHandler;
 $log = new Logger('my_app');
 $log->pushHandler(new StreamHandler(__DIR__.'/my_app.log', Logger::DEBUG));
 
-//处理上传的文件
-
 $file = $_FILES['file'];
 
 //打印文件
 $log->info('切片',$file);
+
+$orgFileName = $_POST['filename'];
+$log->info("orgFileName:" . $orgFileName);
 
 //获取文件名称
 $filename = explode("." , $_POST['filename']);
@@ -56,21 +57,27 @@ if( $_POST['fragindex'] == $_POST["total"] -1 ){
 
     //获取filename
     while ( ( $fragFileName = readdir($handler) ) !== false ){
+        $fp = fopen( FILEPATH . '/' . $orgFileName,"ab" );
         // 务必使用!==，防止目录下出现类似文件名“0”等情况
         if ($fragFileName !== "." && $fragFileName !== "..")
         {
-            $blob .= file_get_contents( $fragDir . "/" . $fragFileName );
+            //方式一:
+            //$blob .= file_get_contents( $fragDir . "/" . $fragFileName );
+
+            //方式二:
+            $value = $fragDir . "/" . $fragFileName;
+            $handle = fopen($value,"rb");
+            fwrite($fp,fread($handle,filesize($value)));
+            fclose($handle);
 
             //删除切片文件
-            //@unlink($fragDir . "/" . $fragFileName);
+            @unlink($fragDir . "/" . $fragFileName);
         }
     }
 
     //合并切片到文件
-    file_put_contents( FILEPATH. "/" . $filename . ".". $ext , $blob );
+    //file_put_contents( FILEPATH. "/" . $filename . ".". $ext , $blob );
 
     //删除切片文件夹
-    //@rmdir($fragDir);
-
-    $log->info("fileList",$files);
+    @rmdir($fragDir);
 }
