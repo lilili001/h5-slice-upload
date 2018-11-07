@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>文件上传</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.9.1/jquery.js"></script>
+    <script src="util.js"></script>
+</head>
+<body>
+
+<form method="post" action="/frontend_zujian/h5-slice-upload/server/server.php" enctype="multipart/form-data">
+    <input multiple type="file" id="file" name="file" value="选择文件">
+    <button id="upload" type="button">上传文件</button>
+</form>
+
+<script>
+    $(function () {
+        var url = "/frontend_zujian/h5-slice-upload/server/server.php";
+        var start = 0,end=0,pieceSize = 1024*1000;
+
+
+        $("#upload").click(function () {
+
+            var file = document.getElementById("file");
+
+            //获取所有文件
+            var fileList = file.files;
+
+            //操作文件
+            handleFiles(fileList);
+
+            return false;
+        });
+
+        async function handleFiles(fileList) {
+            var i = 0;
+            while (i<fileList.length){
+                console.log("=================================================");
+                console.log('开始处理第' + i + "个文件, 文件是" + fileList[i]['name'] );
+                var targetFile = fileList[i];
+                await uploadFile(targetFile,i);
+                i++;
+                if(i == fileList.length) return;
+            }
+        }
+
+        //upload file
+        async function uploadFile(targetFile,index) {
+            //console.log(targetFile);
+            var tmp = targetFile.name.split(".");
+            var filename = "file-"+guid() + '.' + tmp[tmp.length-1] ;
+            var fileSize = targetFile.size;
+            var total =  Math.ceil( fileSize / pieceSize );
+
+            var i = 0;
+
+            await handle();
+
+            async function handle() {
+                while(i < total){
+                    end = start + pieceSize;
+                    if(end >= fileSize){
+                        end = fileSize;
+                    }
+
+                    console.log( '文件的index:' + index+ '| 处理文件切片 i:'+i , 'start:' + start,  'end:' + end );
+                    var frag = targetFile.slice(start, end);
+
+                    await send( filename,frag,i , total ,function () {
+                        console.log( '文件的index:' + index+ "| 切片上传 回调 res111",i)
+                    });
+                    start = end;
+                    i++;
+                }
+            }
+        }
+
+        //send
+        async function send(filename,frag,index,total,cb) {
+
+            var formData = new FormData();
+            var fragname = "frag-" + guid();
+
+            formData.append("filename",filename);
+            formData.append("fragname",fragname);
+            formData.append("file",frag);
+            formData.append("fragindex",index);
+            formData.append("total",total);
+
+            await $.ajax({
+                url: url,
+                type: 'POST',
+                cache: false,
+                data: formData,
+                processData: false,
+                contentType: false
+            }).done(function (res) {
+                //console.log('res:' + index);
+                cb && cb();
+            }).fail(function (res) {
+            });
+        }
+    })
+</script>
+</body>
+</html>
